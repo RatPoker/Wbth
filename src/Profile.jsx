@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Cropper from 'react-easy-crop'
 import { getCroppedImg } from './cropImage'
 import { supabase } from './supabase'
@@ -11,6 +12,7 @@ export default function Profile({ user, onSave }) {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const [cropping, setCropping] = useState(false)
+  const navigate = useNavigate()
 
   const onCropComplete = (_, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels)
@@ -34,19 +36,12 @@ export default function Profile({ user, onSave }) {
     if (avatarFile && croppedAreaPixels) {
       const croppedImageBlob = await getCroppedImg(imageUrl, croppedAreaPixels)
 
-      // 👇 converte Blob em File corretamente
       const croppedImageFile = new File([croppedImageBlob], 'avatar.jpg', {
         type: 'image/jpeg',
       })
 
       const filePath = `${user.id}/avatar.jpg`
 
-
-      console.log('user.id:', user.id)
-
-      const { data: authData } = await supabase.auth.getUser()
-      console.log('auth.uid():', authData?.user?.id)
-      
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, croppedImageFile, {
@@ -69,10 +64,12 @@ export default function Profile({ user, onSave }) {
       .upsert({ id: user.id, username, avatar_url })
 
     if (!error) {
-      alert('Perfil atualizado')
+      alert('Perfil atualizado com sucesso!')
       onSave?.()
+      navigate('/home') // redireciona após salvar
     } else {
       console.error('Erro ao salvar perfil:', error)
+      alert('Erro ao salvar perfil: ' + error.message)
     }
   }
 
@@ -83,8 +80,10 @@ export default function Profile({ user, onSave }) {
         .select('*')
         .eq('id', user.id)
         .single()
+
       if (data) setUsername(data.username)
     }
+
     fetchProfile()
   }, [user])
 
