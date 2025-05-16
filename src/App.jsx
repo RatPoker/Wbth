@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from './supabase'
 import Login from './Login'
 import Profile from './Profile'
 import Home from './Home'
 import Chat from './Chat'
 
-export default function App() {
+function AppRoutes() {
   const [user, setUser] = useState(null)
-  const [selectedUser, setSelectedUser] = useState(null)
   const [profileSet, setProfileSet] = useState(false)
 
   useEffect(() => {
@@ -19,25 +19,21 @@ export default function App() {
     })
   }, [])
 
-  useEffect(() => {
-    if (!user) return
-    const interval = setInterval(async () => {
-      await supabase.from('presence').upsert({
-        user_id: user.id,
-        email: user.email,
-        avatar_url: user.user_metadata?.avatar_url,
-        last_seen: new Date().toISOString()
-      })
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [user])
-
   if (!user) return <Login onLogin={setUser} />
-  if (!profileSet) return <Profile user={user} onDone={() => setProfileSet(true)} />
+  if (!profileSet) return <Profile user={user} onSave={() => setProfileSet(true)} />
 
-  return selectedUser ? (
-    <Chat user={user} otherUser={selectedUser} goBack={() => setSelectedUser(null)} />
-  ) : (
-    <Home currentUserId={user.id} onSelectUser={setSelectedUser} />
+  return (
+    <Routes>
+      <Route path="/" element={<Home currentUserId={user.id} onSelectUser={() => {}} />} />
+      <Route path="/chat/:userId" element={<Chat user={user} />} />
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   )
 }
