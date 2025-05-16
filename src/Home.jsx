@@ -3,26 +3,40 @@ import { supabase } from './supabase'
 
 export default function Home({ currentUserId, onSelectUser }) {
   const [users, setUsers] = useState([])
+  const [onlineUserIds, setOnlineUserIds] = useState([])
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const { data } = await supabase.from('presence').select('*')
-        .neq('user_id', currentUserId)
-      setUsers(data)
+    const fetchData = async () => {
+      // Busca todos os perfis, exceto o atual
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, email, avatar_url')
+        .neq('id', currentUserId)
+
+      // Busca todos da tabela `presence`
+      const { data: presence } = await supabase
+        .from('presence')
+        .select('user_id')
+
+      const onlineIds = presence.map(p => p.user_id)
+
+      setOnlineUserIds(onlineIds)
+      setUsers(profiles || [])
     }
 
-    fetchUsers()
-    const interval = setInterval(fetchUsers, 10000)
+    fetchData()
+    const interval = setInterval(fetchData, 10000)
     return () => clearInterval(interval)
   }, [currentUserId])
 
   return (
     <div className="user-list">
-      <h2>Usuários Online</h2>
+      <h2>Usuários</h2>
       {users.map(user => (
-        <div key={user.user_id} onClick={() => onSelectUser(user)}>
-          <img src={user.avatar_url} alt="" width={30} />
+        <div key={user.id} onClick={() => onSelectUser(user)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 0' }}>
+          <img src={user.avatar_url} alt="" width={30} height={30} style={{ borderRadius: '50%' }} />
           <span>{user.email}</span>
+          {onlineUserIds.includes(user.id) && <span style={{ color: 'green' }}>●</span>}
         </div>
       ))}
     </div>
