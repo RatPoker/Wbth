@@ -9,6 +9,7 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [selectedUser, setSelectedUser] = useState(null)
   const [profileSet, setProfileSet] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -16,7 +17,10 @@ export default function App() {
       const currentUser = authData.user
       setUser(currentUser)
 
-      if (!currentUser) return
+      if (!currentUser) {
+        setLoading(false)
+        return
+      }
 
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -27,12 +31,13 @@ export default function App() {
       if (profile?.username && !error) {
         setProfileSet(true)
       }
+
+      setLoading(false)
     }
 
     fetchUserAndProfile()
   }, [])
 
-  // Atualiza presença periodicamente
   useEffect(() => {
     if (!user) return
 
@@ -48,6 +53,7 @@ export default function App() {
     return () => clearInterval(interval)
   }, [user])
 
+  if (loading) return <p>Carregando...</p>
   if (!user) return <Login onLogin={setUser} />
   if (!profileSet) return <Profile user={user} onDone={() => setProfileSet(true)} />
 
