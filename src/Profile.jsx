@@ -1,24 +1,59 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-export default function Profile({ user, onDone }) {
-  const [name, setName] = useState(user.user_metadata?.name || '')
-  const [avatar, setAvatar] = useState(user.user_metadata?.avatar_url || '')
+export default function Profile({ user, onSave }) {
+  const [username, setUsername] = useState('')
+  const [avatarFile, setAvatarFile] = useState(null)
 
-  const save = async () => {
-    const { error } = await supabase.auth.updateUser({
-      data: { name, avatar_url: avatar }
-    })
-    if (error) return alert(error.message)
-    onDone()
+  const saveProfile = async () => {
+    let avatar_url = null
+
+    if (avatarFile) {
+      const fileExt = avatarFile.name.split('.').pop()
+      const filePath = `${user.id}/avatar.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatarFile, { upsert: true })
+
+      if (uploadError) {
+        alert('Erro ao enviar imagem')
+        return
+      }
+      avatar_url = filePath
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({ id: user.id, username, avatar_url })
+
+    if (!error) {
+      alert('Perfil atualizado')
+      onSave?.()
+    }
   }
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      if (data) setUsername(data.username)
+    }
+    fetchProfile()
+  }, [user])
+
   return (
-    <div className="profile">
-      <h2>Configurar Perfil</h2>
-      <input placeholder="Nome" value={name} onChange={e => setName(e.target.value)} />
-      <input placeholder="Avatar URL" value={avatar} onChange={e => setAvatar(e.target.value)} />
-      <button onClick={save}>Salvar</button>
+    <div>
+      <h2>Configuração de Perfil</h2>
+      <input
+        value={username}
+        onChange={e => setUsername(e.target.value)}
+        placeholder="Nome de usuário"
+      />
+      <input type="file" onChange={e => setAvatarFile(e.target.files[0])} />
+      <button onClick={saveProfile}>Salvar</button>
     </div>
   )
 }
