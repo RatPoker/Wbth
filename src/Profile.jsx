@@ -45,7 +45,7 @@ export default function Profile({ user, onSave }) {
       console.log('user.id:', user.id)
 
       const { data: authData } = await supabase.auth.getUser()
-      console.log('auth.uid():', authData?.user?.i
+      console.log('auth.uid():', authData?.user?.id)
       
       const { error: uploadError } = await supabase.storage
         .from('avatars')
