@@ -3,57 +3,69 @@ import { supabase } from './supabase'
 
 export default function Chat({ user, otherUser, goBack }) {
   const [messages, setMessages] = useState([])
-  const [text, setText] = useState('')
-
-  const roomId = [user.id, otherUser.user_id].sort().join('-')
+  const [newMessage, setNewMessage] = useState('')
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('room', roomId)
-        .order('created_at', { ascending: true })
-      setMessages(data)
-    }
+    fetchMessages()
 
     const channel = supabase
-      .channel('realtime:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        if (payload.new.room === roomId) {
-          setMessages(prev => [...prev, payload.new])
+      .channel('messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        payload => {
+          const msg = payload.new
+          if (
+            (msg.sender_id === user.id && msg.receiver_id === otherUser.id) ||
+            (msg.sender_id === otherUser.id && msg.receiver_id === user.id)
+          ) {
+            setMessages(prev => [...prev, msg])
+          }
         }
-      })
+      )
       .subscribe()
 
-    load()
-    return () => supabase.removeChannel(channel)
-  }, [roomId])
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, otherUser])
 
-  const send = async () => {
-    if (!text.trim()) return
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUser.id}),and(sender_id.eq.${otherUser.id},receiver_id.eq.${user.id})`)
+      .order('created_at', { ascending: true })
+
+    setMessages(data)
+  }
+
+  const sendMessage = async () => {
     await supabase.from('messages').insert({
-      sender: user.id,
-      receiver: otherUser.user_id,
-      room: roomId,
-      text
+      sender_id: user.id,
+      receiver_id: otherUser.id,
+      content: newMessage
     })
-    setText('')
+    setNewMessage('')
   }
 
   return (
-    <div className="chat">
-      <button onClick={goBack}>← Voltar</button>
-      <h3>Chat com {otherUser.email}</h3>
-      <div className="messages">
-        {messages.map(m => (
-          <div key={m.id} className={m.sender === user.id ? 'me' : 'other'}>
-            <span>{m.text}</span>
-          </div>
+    <div>
+      <h2>Chat com {otherUser.username}</h2>
+      <button onClick={goBack}>Voltar</button>
+      <div style={{ height: '300px', overflow: 'auto' }}>
+        {messages.map(msg => (
+          <p key={msg.id}>
+            <strong>{msg.sender_id === user.id ? 'Você' : otherUser.username}:</strong> {msg.content}
+          </p>
         ))}
       </div>
-      <input value={text} onChange={e => setText(e.target.value)} placeholder="Digite uma mensagem..." />
-      <button onClick={send}>Enviar</button>
+      <input
+        value={newMessage}
+        onChange={e => setNewMessage(e.target.value)}
+        placeholder="Digite uma mensagem"
+      />
+      <button onClick={sendMessage}>Enviar</button>
     </div>
   )
 }
