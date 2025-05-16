@@ -13,7 +13,7 @@
     "react-easy-crop": "^4.x.x",
     "@mui/material": "^5.x.x",
     "@mui/icons-material": "^5.x.x",
-    "react-router-dom": "^6.22.0"  // ✅ Adicione esta linha
+    "react-router-dom": "^6.22.0"
   },
   "devDependencies": {
     "vite": "^5.0.0",
