@@ -16,10 +16,11 @@ export default function Profile({ user, onSave }) {
     setCroppedAreaPixels(croppedAreaPixels)
   }
 
-  const handleSelectFile = e => {
+  const handleSelectFile = (e) => {
     const file = e.target.files[0]
     if (!file) return
     setAvatarFile(file)
+
     const reader = new FileReader()
     reader.onloadend = () => {
       setImageUrl(reader.result)
@@ -33,13 +34,15 @@ export default function Profile({ user, onSave }) {
 
     if (avatarFile && croppedAreaPixels) {
       const croppedImageBlob = await getCroppedImg(imageUrl, croppedAreaPixels)
-      const filePath = `${user.id}/avatar.jpg`
+      const filePath = `${user.id}/avatar.jpg` // <- Certo! Isso gera: uuid/avatar.jpg
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, croppedImageBlob, { upsert: true })
 
       if (uploadError) {
-        alert('Erro ao enviar imagem')
+        console.error(uploadError)
+        alert('Erro ao enviar imagem.')
         return
       }
 
@@ -50,21 +53,32 @@ export default function Profile({ user, onSave }) {
       .from('profiles')
       .upsert({ id: user.id, username, avatar_url })
 
-    if (!error) {
-      alert('Perfil atualizado')
-      onSave?.()
+    if (error) {
+      console.error(error)
+      alert('Erro ao salvar perfil.')
+      return
     }
+
+    alert('Perfil atualizado com sucesso!')
+    onSave?.()
   }
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
+
+      if (error) {
+        console.error(error)
+        return
+      }
+
       if (data) setUsername(data.username)
     }
+
     fetchProfile()
   }, [user])
 
