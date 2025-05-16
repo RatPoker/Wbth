@@ -10,6 +10,9 @@
     "@supabase/supabase-js": "^2.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
+    "react-easy-crop": "^4.x.x",
+    "@mui/material": "^5.x.x",
+    "@mui/icons-material": "^5.x.x",
   },
   "devDependencies": {
     "vite": "^5.0.0",
