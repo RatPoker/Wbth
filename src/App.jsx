@@ -1,22 +1,33 @@
-import React from 'react'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import Home from './Home'
 import Chat from './Chat'
+import Login from './Login'
 
-function App() {
+export default function App() {
   const [user, setUser] = useState(null)
+  const [loadingUser, setLoadingUser] = useState(true)
   const [selectedUser, setSelectedUser] = useState(null)
 
   useEffect(() => {
-    // Recupera usuário logado
+    // Verifica se o usuário está logado
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
+      setLoadingUser(false)
     })
+
+    // Escuta mudanças de sessão (login/logout)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => {
+      listener.subscription.unsubscribe()
+    }
   }, [])
 
+  // Atualiza presença a cada 10s
   useEffect(() => {
-    // Marca presença a cada 10s
     const interval = setInterval(async () => {
       if (!user) return
       await supabase.from('presence').upsert({
@@ -29,10 +40,21 @@ function App() {
     return () => clearInterval(interval)
   }, [user])
 
-  if (!user) return <p>Carregando usuário...</p>
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setSelectedUser(null)
+  }
+
+  if (loadingUser) return <p>Carregando usuário...</p>
+  if (!user) return <Login onLogin={setUser} />
 
   return (
-    <div>
+    <div style={{ padding: '1rem' }}>
+      <button onClick={handleLogout} style={{ marginBottom: '1rem' }}>
+        Sair
+      </button>
+
       {!selectedUser ? (
         <Home onSelectUser={setSelectedUser} currentUserId={user.id} />
       ) : (
@@ -41,5 +63,3 @@ function App() {
     </div>
   )
 }
-
-export default App
