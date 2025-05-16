@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import Home from './Home'
-import Chat from './Chat'
+import Home from './home'
+import Chat from './chat'
 
 function App() {
   const [user, setUser] = useState(null)
