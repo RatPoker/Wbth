@@ -41,6 +41,12 @@ export default function Profile({ user, onSave }) {
 
       const filePath = `${user.id}/avatar.jpg`
 
+
+      console.log('user.id:', user.id)
+
+      const { data: authData } = await supabase.auth.getUser()
+      console.log('auth.uid():', authData?.user?.i
+      
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, croppedImageFile, {
