@@ -12,13 +12,14 @@ export default function Profile({ user, onSave }) {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const [cropping, setCropping] = useState(false)
+
   const navigate = useNavigate()
 
   const onCropComplete = (_, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels)
   }
 
-  const handleSelectFile = e => {
+  const handleSelectFile = (e) => {
     const file = e.target.files[0]
     if (!file) return
     setAvatarFile(file)
@@ -64,12 +65,11 @@ export default function Profile({ user, onSave }) {
       .upsert({ id: user.id, username, avatar_url })
 
     if (!error) {
-      alert('Perfil atualizado com sucesso!')
+      alert('Perfil atualizado')
       onSave?.()
-      navigate('/home') // redireciona após salvar
+      navigate('/') // 🔁 redireciona para a home
     } else {
       console.error('Erro ao salvar perfil:', error)
-      alert('Erro ao salvar perfil: ' + error.message)
     }
   }
 
@@ -80,10 +80,8 @@ export default function Profile({ user, onSave }) {
         .select('*')
         .eq('id', user.id)
         .single()
-
-      if (data) setUsername(data.username)
+      if (data) setUsername(data.username || '')
     }
-
     fetchProfile()
   }, [user])
 
@@ -92,7 +90,7 @@ export default function Profile({ user, onSave }) {
       <h2>Configuração de Perfil</h2>
       <input
         value={username}
-        onChange={e => setUsername(e.target.value)}
+        onChange={(e) => setUsername(e.target.value)}
         placeholder="Nome de usuário"
       />
       <input type="file" onChange={handleSelectFile} />
