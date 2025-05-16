@@ -16,11 +16,10 @@ export default function Profile({ user, onSave }) {
     setCroppedAreaPixels(croppedAreaPixels)
   }
 
-  const handleSelectFile = (e) => {
+  const handleSelectFile = e => {
     const file = e.target.files[0]
     if (!file) return
     setAvatarFile(file)
-
     const reader = new FileReader()
     reader.onloadend = () => {
       setImageUrl(reader.result)
@@ -34,15 +33,25 @@ export default function Profile({ user, onSave }) {
 
     if (avatarFile && croppedAreaPixels) {
       const croppedImageBlob = await getCroppedImg(imageUrl, croppedAreaPixels)
-      const filePath = `${user.id}/avatar.jpg` // <- Certo! Isso gera: uuid/avatar.jpg
+
+      // 👇 converte Blob em File corretamente
+      const croppedImageFile = new File([croppedImageBlob], 'avatar.jpg', {
+        type: 'image/jpeg',
+      })
+
+      const filePath = `${user.id}/avatar.jpg`
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, croppedImageBlob, { upsert: true })
+        .upload(filePath, croppedImageFile, {
+          upsert: true,
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+        })
 
       if (uploadError) {
-        console.error(uploadError)
-        alert('Erro ao enviar imagem.')
+        console.error('Erro no upload:', uploadError)
+        alert('Erro ao enviar imagem: ' + uploadError.message)
         return
       }
 
@@ -53,32 +62,23 @@ export default function Profile({ user, onSave }) {
       .from('profiles')
       .upsert({ id: user.id, username, avatar_url })
 
-    if (error) {
-      console.error(error)
-      alert('Erro ao salvar perfil.')
-      return
+    if (!error) {
+      alert('Perfil atualizado')
+      onSave?.()
+    } else {
+      console.error('Erro ao salvar perfil:', error)
     }
-
-    alert('Perfil atualizado com sucesso!')
-    onSave?.()
   }
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
-
-      if (error) {
-        console.error(error)
-        return
-      }
-
       if (data) setUsername(data.username)
     }
-
     fetchProfile()
   }, [user])
 
